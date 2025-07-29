@@ -35,21 +35,21 @@ convert_latency() {
     fi
 }
 
-# ✨ Show config
-echo -e "\n🔧 Running stress test with parameters:"
-echo "  Threads      : $THREADS"
-echo "  Connections  : $CONNS"
-echo "  Duration     : ${DURATION}s"
-echo "  Timeout      : ${TIMEOUT}s"
-echo "  Output Format: $FORMAT"
-echo "  Sites to Test:"
-for url in "${URLS[@]}"; do
-    echo "    - $url"
-done
-echo
-
-# Header
+# ✨ Show config - only in table format
 if [[ "$FORMAT" == "table" ]]; then
+    echo -e "\n🔧 Running stress test with parameters:"
+    echo "  Threads      : $THREADS"
+    echo "  Connections  : $CONNS"
+    echo "  Duration     : ${DURATION}s"
+    echo "  Timeout      : ${TIMEOUT}s"
+    echo "  Output Format: $FORMAT"
+    echo "  Sites to Test:"
+    for url in "${URLS[@]}"; do
+        echo "    - $url"
+    done
+    echo
+
+    # Header
     printf "\n%-40s | %10s | %10s | %8s | %14s | %6s | %6s\n" \
         "URL" "Latency" "Req/sec" "Total" "Transfer/sec" "Errors" "Grade"
     printf -- "------------------------------------------------------------------------------------------------------------------\n"
@@ -88,7 +88,7 @@ for URL in "${URLS[@]}"; do
     TIMEOUT_PCT=$(awk "BEGIN { if ($TOTALREQ > 0) print ($TIMEOUTS / $TOTALREQ) * 100; else print 100 }")
 
     # Grading
-    if [[ $(awk "BEGIN {print ($REQSEC >= 300)}") -eq 1 && "$LAT_MS" -le 100 && "$TIMEOUT_PCT" == "0" && "$CONNECTS" -eq 0 ]]; then
+    if [[ $(awk "BEGIN {print ($REQSEC >= 200)}") -eq 1 && "$LAT_MS" -le 100 && $(awk "BEGIN {print ($TIMEOUT_PCT <= 1)}") -eq 1 && "$CONNECTS" -eq 0 ]]; then
         GRADE="A"
     elif [[ $(awk "BEGIN {print ($REQSEC >= 100)}") -eq 1 && "$LAT_MS" -le 300 && $(awk "BEGIN {print ($TIMEOUT_PCT <= 2)}") -eq 1 && "$CONNECTS" -eq 0 ]]; then
         GRADE="B"
@@ -106,7 +106,7 @@ for URL in "${URLS[@]}"; do
             "$URL" "$LATENCY" "$REQSEC" "$TOTALREQ" "$TRANSFER" "$ERROR_TOTAL" "$GRADE"
     fi
 
-    # JSON output
+    # JSON output - simplified to match table columns
     RESULTS+=("{
         \"url\": \"$URL\",
         \"latency\": \"$LATENCY\",
@@ -114,17 +114,30 @@ for URL in "${URLS[@]}"; do
         \"total_requests\": \"$TOTALREQ\",
         \"transfer_per_sec\": \"$TRANSFER\",
         \"errors\": $ERROR_TOTAL,
-        \"grade\": \"$GRADE\",
-        \"socket_errors\": {
-            \"connect\": $CONNECTS,
-            \"read\": $READS,
-            \"write\": $WRITES,
-            \"timeout\": $TIMEOUTS
-        }
-    }")s
+        \"grade\": \"$GRADE\"
+    }")
 done
 
-# JSON
+# JSON output with config included
 if [[ "$FORMAT" == "json" ]]; then
-    echo -e "\n[\n$(IFS=,; echo "${RESULTS[*]}")\n]"
+    URLS_JSON=""
+    for i in "${!URLS[@]}"; do
+        if [[ $i -gt 0 ]]; then
+            URLS_JSON+=", "
+        fi
+        URLS_JSON+="\"${URLS[$i]}\""
+    done
+
+    echo -e "{
+  \"config\": {
+    \"threads\": $THREADS,
+    \"connections\": $CONNS,
+    \"duration\": $DURATION,
+    \"timeout\": $TIMEOUT,
+    \"urls\": [$URLS_JSON]
+  },
+  \"results\": [
+    $(IFS=,; echo "${RESULTS[*]}")
+  ]
+}"
 fi

@@ -53,7 +53,7 @@ Output results in JSON format:
 
 | Grade | Requirements                                                     |
 |-------|------------------------------------------------------------------|
-| A     | ≥300 req/sec, ≤100ms latency, 0% timeouts, no connection errors |
+| A     | ≥200 req/sec, ≤100ms latency, ≤1% timeouts, 0 connection errors |
 | B     | ≥100 req/sec, ≤300ms latency, ≤2% timeouts, no connection errors|
 | C     | ≥25 req/sec, ≤750ms latency, ≤5% timeouts                       |
 | D     | ≥5 req/sec, ≤1500ms latency, ≤10% timeouts                      |
@@ -72,21 +72,24 @@ https://example.com                     |     68.2ms |     123.45 |    7400  |  
 ### JSON Format
 
 ```json
-[
 {
-    "url": "https://example.com",
-    "latency": "68.2ms",
-    "requests_per_sec": "123.45",
-    "total_requests": "7400",
-    "transfer_per_sec": "1.14MB",
-    "errors": 0,
-    "grade": "A",
-    "socket_errors": {
-        "connect": 0,
-        "read": 0,
-        "write": 0,
-        "timeout": 0
+  "config": {
+    "threads": 2,
+    "connections": 10,
+    "duration": 60,
+    "timeout": 10,
+    "urls": ["https://example.com"]
+  },
+  "results": [
+    {
+      "url": "https://example.com",
+      "latency": "68.2ms",
+      "requests_per_sec": "123.45",
+      "total_requests": "7400",
+      "transfer_per_sec": "1.14MB",
+      "errors": 0,
+      "grade": "A"
     }
+  ]
 }
-]
 ```
